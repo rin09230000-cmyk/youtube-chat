@@ -1,6 +1,23 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import platform
+
+# ---------------------------
+# 한글 폰트 설정
+# ---------------------------
+plt.rcParams['axes.unicode_minus'] = False
+
+try:
+    font_path = "NanumGothic.ttf"
+    fontprop = fm.FontProperties(fname=font_path)
+
+    plt.rc('font', family=fontprop.get_name())
+
+except:
+    plt.rc('font', family='sans-serif')
 from collections import Counter
 from wordcloud import WordCloud
 from googleapiclient.discovery import build
