@@ -3,5 +3,3 @@ pandas
 matplotlib
 wordcloud
 google-api-python-client
-konlpy
-jpype1
