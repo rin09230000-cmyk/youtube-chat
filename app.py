@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from wordcloud import WordCloud
 from googleapiclient.discovery import build
-from konlpy.tag import Okt
 from collections import Counter
 from urllib.parse import urlparse, parse_qs
 import re
@@ -20,7 +19,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# 한글 폰트 강제 적용
+# 한글 폰트 설정
 # -----------------------------
 FONT_PATH = "NanumGothic.ttf"
 
@@ -31,14 +30,16 @@ if os.path.exists(FONT_PATH):
         fname=FONT_PATH
     ).get_name()
 
-    plt.rcParams["font.family"] = font_name
+    plt.rcParams[
+        "font.family"
+    ] = font_name
 
 plt.rcParams[
     "axes.unicode_minus"
 ] = False
 
 # -----------------------------
-# API KEY
+# API KEY (Secret)
 # -----------------------------
 api_key = st.secrets[
     "YOUTUBE_API_KEY"
@@ -47,14 +48,19 @@ api_key = st.secrets[
 # -----------------------------
 # 제목
 # -----------------------------
-st.title("📊 유튜브 댓글 분석 웹앱")
+st.title(
+    "📊 유튜브 댓글 분석 웹앱"
+)
 
 st.markdown(
-    "유튜브 댓글을 수집하고 사용자 반응을 분석합니다."
+    """
+유튜브 댓글을 수집하고  
+사용자 반응을 데이터 분석과 시각화로 분석합니다.
+"""
 )
 
 # -----------------------------
-# 영상 링크 입력
+# 유튜브 링크 입력
 # -----------------------------
 video_url = st.text_input(
     "유튜브 영상 링크 입력",
@@ -82,10 +88,11 @@ def get_video_id(url):
     if parsed_url.hostname == "youtu.be":
         return parsed_url.path[1:]
 
-    if parsed_url.hostname in [
+    elif parsed_url.hostname in [
         "youtube.com",
         "www.youtube.com"
     ]:
+
         return parse_qs(
             parsed_url.query
         ).get(
@@ -97,7 +104,7 @@ def get_video_id(url):
 
 
 # -----------------------------
-# 댓글 수집
+# 댓글 수집 함수
 # -----------------------------
 def get_comments(
     api_key,
@@ -124,7 +131,7 @@ def get_comments(
             maxResults=100,
             pageToken=next_page_token,
             textFormat="plainText",
-            order="time"   # 최신순
+            order="time"
         )
 
         response = request.execute()
@@ -172,15 +179,16 @@ def get_comments(
                 progress
             )
 
-            if len(comments) >= max_comments:
+            if (
+                len(comments)
+                >= max_comments
+            ):
                 break
 
-        # 다음 페이지 토큰
         next_page_token = response.get(
             "nextPageToken"
         )
 
-        # 다음 댓글 없으면 종료
         if not next_page_token:
             break
 
@@ -194,7 +202,9 @@ def get_comments(
 # -----------------------------
 # 분석 버튼
 # -----------------------------
-if st.button("댓글 분석 시작 🚀"):
+if st.button(
+    "댓글 분석 시작 🚀"
+):
 
     if not video_url:
         st.warning(
@@ -208,7 +218,7 @@ if st.button("댓글 분석 시작 🚀"):
 
     if not video_id:
         st.error(
-            "유효한 링크가 아닙니다."
+            "유효한 유튜브 링크가 아닙니다."
         )
         st.stop()
 
@@ -221,6 +231,12 @@ if st.button("댓글 분석 시작 🚀"):
             video_id,
             max_comments
         )
+
+    if df.empty:
+        st.error(
+            "댓글을 가져올 수 없습니다."
+        )
+        st.stop()
 
     st.success(
         f"✅ {len(df)}개의 댓글 수집 완료!"
@@ -239,7 +255,7 @@ if st.button("댓글 분석 시작 🚀"):
     )
 
     # -----------------------------
-    # 시간 처리
+    # 시간 데이터 처리
     # -----------------------------
     df["작성시간"] = pd.to_datetime(
         df["작성시간"]
@@ -251,7 +267,7 @@ if st.button("댓글 분석 시작 🚀"):
     )
 
     # -----------------------------
-    # 시간대별 댓글
+    # 시간대별 댓글 추이
     # -----------------------------
     st.subheader(
         "🕒 시간대별 댓글 추이"
@@ -283,8 +299,13 @@ if st.button("댓글 분석 시작 🚀"):
         "시간대별 댓글 작성 추이"
     )
 
-    ax.set_xlabel("시간대")
-    ax.set_ylabel("댓글 수")
+    ax.set_xlabel(
+        "시간대"
+    )
+
+    ax.set_ylabel(
+        "댓글 수"
+    )
 
     st.pyplot(fig)
 
@@ -295,9 +316,9 @@ if st.button("댓글 분석 시작 🚀"):
         "👍 좋아요 수 분석"
     )
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    c1.metric(
+    col1.metric(
         "평균 좋아요",
         round(
             df["좋아요수"].mean(),
@@ -305,19 +326,42 @@ if st.button("댓글 분석 시작 🚀"):
         )
     )
 
-    c2.metric(
+    col2.metric(
         "최대 좋아요",
         int(
             df["좋아요수"].max()
         )
     )
 
-    c3.metric(
+    col3.metric(
         "총 좋아요",
         int(
             df["좋아요수"].sum()
         )
     )
+
+    fig2, ax2 = plt.subplots(
+        figsize=(12, 5)
+    )
+
+    ax2.hist(
+        df["좋아요수"],
+        bins=30
+    )
+
+    ax2.set_title(
+        "좋아요 수 분포"
+    )
+
+    ax2.set_xlabel(
+        "좋아요 수"
+    )
+
+    ax2.set_ylabel(
+        "댓글 개수"
+    )
+
+    st.pyplot(fig2)
 
     # -----------------------------
     # 워드클라우드
@@ -326,49 +370,77 @@ if st.button("댓글 분석 시작 🚀"):
         "☁️ 워드클라우드"
     )
 
-    okt = Okt()
-
     text = " ".join(
         df["댓글"]
         .astype(str)
     )
 
+    # 한글만 남기기
     text = re.sub(
         r"[^가-힣\s]",
-        "",
+        " ",
         text
     )
 
-    nouns = okt.nouns(text)
+    words = text.split()
 
     stopwords = [
         "영상", "진짜",
         "너무", "그냥",
-        "이거", "저거"
+        "이거", "저거",
+        "정말", "오늘",
+        "ㅋㅋ", "ㅎㅎ",
+        "ㅠㅠ", "입니다"
     ]
 
     words = [
-        word for word in nouns
+        word for word in words
         if len(word) > 1
         and word not in stopwords
     ]
 
-    word_freq = Counter(words)
+    word_freq = Counter(
+        words
+    )
 
     wc = WordCloud(
         font_path=FONT_PATH,
-        width=1000,
-        height=500,
+        width=1200,
+        height=600,
         background_color="white"
     ).generate_from_frequencies(
         word_freq
     )
 
-    fig2, ax2 = plt.subplots(
-        figsize=(14, 6)
+    fig3, ax3 = plt.subplots(
+        figsize=(15, 7)
     )
 
-    ax2.imshow(wc)
-    ax2.axis("off")
+    ax3.imshow(wc)
 
-    st.pyplot(fig2)
+    ax3.axis(
+        "off"
+    )
+
+    st.pyplot(fig3)
+
+    # -----------------------------
+    # TOP10 단어
+    # -----------------------------
+    st.subheader(
+        "🔥 자주 등장한 단어 TOP10"
+    )
+
+    top10 = pd.DataFrame(
+        word_freq.most_common(10),
+        columns=[
+            "단어",
+            "빈도수"
+        ]
+    )
+
+    st.bar_chart(
+        top10.set_index(
+            "단어"
+        )
+    )
