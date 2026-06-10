@@ -39,7 +39,7 @@ plt.rcParams[
 ] = False
 
 # -----------------------------
-# API KEY (Secret)
+# API KEY
 # -----------------------------
 api_key = st.secrets[
     "YOUTUBE_API_KEY"
@@ -52,15 +52,13 @@ st.title(
     "📊 유튜브 댓글 분석 웹앱"
 )
 
-st.markdown(
-    """
-유튜브 댓글을 수집하고  
-사용자 반응을 데이터 분석과 시각화로 분석합니다.
-"""
-)
+st.markdown("""
+유튜브 댓글을 수집하여  
+사용자 반응을 데이터 분석과 시각화로 살펴봅니다.
+""")
 
 # -----------------------------
-# 유튜브 링크 입력
+# 영상 링크 입력
 # -----------------------------
 video_url = st.text_input(
     "유튜브 영상 링크 입력",
@@ -104,7 +102,7 @@ def get_video_id(url):
 
 
 # -----------------------------
-# 댓글 수집 함수
+# 댓글 수집
 # -----------------------------
 def get_comments(
     api_key,
@@ -234,7 +232,7 @@ if st.button(
 
     if df.empty:
         st.error(
-            "댓글을 가져올 수 없습니다."
+            "댓글을 가져오지 못했습니다."
         )
         st.stop()
 
@@ -289,28 +287,20 @@ if st.button(
         marker="o"
     )
 
-    ax.set_xticks(
-        range(24)
-    )
-
+    ax.set_xticks(range(24))
     ax.grid(alpha=0.3)
 
     ax.set_title(
         "시간대별 댓글 작성 추이"
     )
 
-    ax.set_xlabel(
-        "시간대"
-    )
-
-    ax.set_ylabel(
-        "댓글 수"
-    )
+    ax.set_xlabel("시간대")
+    ax.set_ylabel("댓글 수")
 
     st.pyplot(fig)
 
     # -----------------------------
-    # 좋아요 분석
+    # 좋아요 분석 개선
     # -----------------------------
     st.subheader(
         "👍 좋아요 수 분석"
@@ -327,30 +317,41 @@ if st.button(
     )
 
     col2.metric(
+        "중앙값 좋아요",
+        int(
+            df["좋아요수"].median()
+        )
+    )
+
+    col3.metric(
         "최대 좋아요",
         int(
             df["좋아요수"].max()
         )
     )
 
-    col3.metric(
-        "총 좋아요",
-        int(
-            df["좋아요수"].sum()
-        )
+    # 이상치 제거
+    threshold = (
+        df["좋아요수"]
+        .quantile(0.95)
     )
+
+    filtered_likes = df[
+        df["좋아요수"]
+        <= threshold
+    ]["좋아요수"]
 
     fig2, ax2 = plt.subplots(
         figsize=(12, 5)
     )
 
     ax2.hist(
-        df["좋아요수"],
+        filtered_likes,
         bins=30
     )
 
     ax2.set_title(
-        "좋아요 수 분포"
+        "좋아요 수 분포 (상위 5% 제외)"
     )
 
     ax2.set_xlabel(
@@ -364,6 +365,31 @@ if st.button(
     st.pyplot(fig2)
 
     # -----------------------------
+    # 좋아요 TOP 댓글
+    # -----------------------------
+    st.subheader(
+        "🔥 좋아요 TOP10 댓글"
+    )
+
+    top_comments = (
+        df.sort_values(
+            "좋아요수",
+            ascending=False
+        )
+        .head(10)
+    )
+
+    st.dataframe(
+        top_comments[
+            [
+                "댓글",
+                "좋아요수"
+            ]
+        ],
+        use_container_width=True
+    )
+
+    # -----------------------------
     # 워드클라우드
     # -----------------------------
     st.subheader(
@@ -375,7 +401,6 @@ if st.button(
         .astype(str)
     )
 
-    # 한글만 남기기
     text = re.sub(
         r"[^가-힣\s]",
         " ",
@@ -417,10 +442,7 @@ if st.button(
     )
 
     ax3.imshow(wc)
-
-    ax3.axis(
-        "off"
-    )
+    ax3.axis("off")
 
     st.pyplot(fig3)
 
