@@ -1,38 +1,34 @@
 import streamlit as st
+from utils import get_channel_from_video
 
-st.set_page_config(
-    page_title="유튜브 분석 플랫폼",
-    page_icon="📊",
-    layout="wide"
+st.title("💬 댓글 분석")
+
+video_url = st.text_input(
+    "유튜브 영상 링크"
 )
 
-st.title("📊 유튜브 분석 플랫폼")
+if st.button("분석하기"):
 
-st.markdown("""
-### 사용 방법
-
-1. 💬 댓글 분석으로 이동
-2. 유튜브 영상 링크 입력
-3. 댓글 분석 실행
-4. 📈 채널 성장 분석 확인
-5. 💰 수익 분석 확인
-
----
-
-### 제공 기능
-
-- 💬 댓글 감성 분석
-- 💰 예상 수익 분석
-- 📈 채널 성장 분석
-
-왼쪽 메뉴에서 원하는 기능을 선택하세요.
-""")
-
-if "channel_name" in st.session_state:
-    st.success(
-        f"현재 선택된 채널 : {st.session_state['channel_name']}"
+    data = get_channel_from_video(
+        video_url
     )
-else:
+
+    if not data:
+        st.error("영상을 찾을 수 없습니다.")
+        st.stop()
+
+    st.session_state[
+        "channel_id"
+    ] = data["channel_id"]
+
+    st.session_state[
+        "channel_name"
+    ] = data["channel_title"]
+
+    st.success(
+        f"채널 저장 완료 : {data['channel_title']}"
+    )
+
     st.info(
-        "아직 선택된 채널이 없습니다."
+        "이제 수익분석 또는 성장분석으로 이동하세요."
     )
