@@ -1,208 +1,468 @@
 import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from wordcloud import WordCloud
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from collections import Counter
+from urllib.parse import urlparse, parse_qs
 import re
+import os
 
-# --------------------------
-# 설정
-# --------------------------
-
-API_KEY = st.secrets["YOUTUBE_API_KEY"]
-
-youtube = build(
-    "youtube",
-    "v3",
-    developerKey=API_KEY
-)
-
+# -----------------------------
+# 페이지 설정
+# -----------------------------
 st.set_page_config(
-    page_title="유튜브 채널 수익 분석기",
+    page_title="유튜브 댓글 분석기",
     page_icon="📊",
     layout="wide"
 )
 
-st.title("📊 유튜브 채널 수익 분석기")
-st.caption("채널명 또는 채널 URL을 입력하세요")
+# -----------------------------
+# 한글 폰트 설정
+# -----------------------------
+FONT_PATH = "NanumGothic.ttf"
 
-# --------------------------
-# URL 처리
-# --------------------------
+if os.path.exists(FONT_PATH):
+    fm.fontManager.addfont(FONT_PATH)
 
-def extract_handle(text):
+    font_name = fm.FontProperties(
+        fname=FONT_PATH
+    ).get_name()
 
-    if "youtube.com/@" in text:
-        match = re.search(r"@([A-Za-z0-9_.-]+)", text)
+    plt.rcParams[
+        "font.family"
+    ] = font_name
 
-        if match:
-            return match.group(1)
+plt.rcParams[
+    "axes.unicode_minus"
+] = False
 
-    if text.startswith("@"):
-        return text.replace("@", "")
+# -----------------------------
+# API KEY
+# -----------------------------
+api_key = st.secrets[
+    "YOUTUBE_API_KEY"
+]
+
+# -----------------------------
+# 제목
+# -----------------------------
+st.title(
+    "📊 유튜브 댓글 분석 웹앱"
+)
+
+st.markdown("""
+유튜브 댓글을 수집하여  
+사용자 반응을 데이터 분석과 시각화로 살펴봅니다.
+""")
+
+# -----------------------------
+# 영상 링크 입력
+# -----------------------------
+video_url = st.text_input(
+    "유튜브 영상 링크 입력",
+    placeholder="https://youtube.com/watch?v=..."
+)
+
+# -----------------------------
+# 댓글 수 슬라이더
+# -----------------------------
+max_comments = st.slider(
+    "수집할 댓글 수",
+    min_value=20,
+    max_value=10000,
+    value=200,
+    step=20
+)
+
+# -----------------------------
+# 영상 ID 추출
+# -----------------------------
+def get_video_id(url):
+
+    parsed_url = urlparse(url)
+
+    if parsed_url.hostname == "youtu.be":
+        return parsed_url.path[1:]
+
+    elif parsed_url.hostname in [
+        "youtube.com",
+        "www.youtube.com"
+    ]:
+
+        return parse_qs(
+            parsed_url.query
+        ).get(
+            "v",
+            [None]
+        )[0]
 
     return None
 
 
-# --------------------------
-# 채널 검색
-# --------------------------
+# -----------------------------
+# 댓글 수집
+# -----------------------------
+def get_comments(
+    api_key,
+    video_id,
+    max_comments
+):
 
-def search_channel(user_input):
-
-    handle = extract_handle(user_input)
-
-    query = handle if handle else user_input
-
-    request = youtube.search().list(
-        q=query,
-        part="snippet",
-        type="channel",
-        maxResults=1
+    youtube = build(
+        "youtube",
+        "v3",
+        developerKey=api_key
     )
 
-    response = request.execute()
+    comments = []
+    next_page_token = None
 
-    items = response.get("items", [])
+    progress_bar = st.progress(0)
 
-    if len(items) == 0:
-        return None
+    while len(comments) < max_comments:
 
-    return items[0]["snippet"]["channelId"]
-
-
-# --------------------------
-# 채널 정보
-# --------------------------
-
-def get_channel_stats(channel_id):
-
-    request = youtube.channels().list(
-        part="snippet,statistics",
-        id=channel_id
-    )
-
-    response = request.execute()
-
-    if not response["items"]:
-        return None
-
-    item = response["items"][0]
-
-    stats = item["statistics"]
-    snippet = item["snippet"]
-
-    return {
-        "title": snippet["title"],
-        "thumbnail": snippet["thumbnails"]["high"]["url"],
-        "subscribers": int(stats.get("subscriberCount", 0)),
-        "views": int(stats.get("viewCount", 0)),
-        "videos": int(stats.get("videoCount", 0))
-    }
-
-
-# --------------------------
-# 수익 계산
-# --------------------------
-
-def estimate_revenue(total_views):
-
-    monthly_views = total_views * 0.03
-
-    low = (monthly_views / 1000) * 0.5
-    avg = (monthly_views / 1000) * 2
-    high = (monthly_views / 1000) * 5
-
-    return low, avg, high
-
-
-# --------------------------
-# UI
-# --------------------------
-
-channel_input = st.text_input(
-    "채널명 또는 URL",
-    placeholder="예: 침착맨 또는 https://youtube.com/@chimchakman"
-)
-
-if st.button("수익 분석하기"):
-
-    if not channel_input:
-        st.warning("채널명을 입력하세요")
-        st.stop()
-
-    try:
-
-        with st.spinner("분석 중..."):
-
-            channel_id = search_channel(channel_input)
-
-            if not channel_id:
-                st.error("채널을 찾을 수 없습니다.")
-                st.stop()
-
-            data = get_channel_stats(channel_id)
-
-            low, avg, high = estimate_revenue(
-                data["views"]
-            )
-
-            col1, col2 = st.columns([1, 3])
-
-            with col1:
-                st.image(data["thumbnail"], width=180)
-
-            with col2:
-                st.subheader(data["title"])
-
-                st.metric(
-                    "구독자 수",
-                    f"{data['subscribers']:,}"
-                )
-
-                st.metric(
-                    "총 조회수",
-                    f"{data['views']:,}"
-                )
-
-                st.metric(
-                    "영상 수",
-                    f"{data['videos']:,}"
-                )
-
-            st.divider()
-
-            st.subheader("💰 예상 월 수익")
-
-            c1, c2, c3 = st.columns(3)
-
-            c1.metric(
-                "보수적",
-                f"${low:,.0f}"
-            )
-
-            c2.metric(
-                "평균",
-                f"${avg:,.0f}"
-            )
-
-            c3.metric(
-                "높은 추정",
-                f"${high:,.0f}"
-            )
-
-            st.info(
-                "실제 수익과 다를 수 있습니다."
-            )
-
-    except HttpError as e:
-
-        st.error(
-            "YouTube API 오류가 발생했습니다."
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=100,
+            pageToken=next_page_token,
+            textFormat="plainText",
+            order="time"
         )
 
-        st.code(str(e))
+        response = request.execute()
 
-    except Exception as e:
+        items = response.get(
+            "items",
+            []
+        )
 
-        st.error("오류 발생")
+        if not items:
+            break
 
-        st.code(str(e))
+        for item in items:
+
+            snippet = item[
+                "snippet"
+            ][
+                "topLevelComment"
+            ][
+                "snippet"
+            ]
+
+            comments.append({
+                "작성시간":
+                    snippet[
+                        "publishedAt"
+                    ],
+                "댓글":
+                    snippet[
+                        "textDisplay"
+                    ],
+                "좋아요수":
+                    snippet[
+                        "likeCount"
+                    ]
+            })
+
+            progress = min(
+                len(comments)
+                / max_comments,
+                1.0
+            )
+
+            progress_bar.progress(
+                progress
+            )
+
+            if (
+                len(comments)
+                >= max_comments
+            ):
+                break
+
+        next_page_token = response.get(
+            "nextPageToken"
+        )
+
+        if not next_page_token:
+            break
+
+    progress_bar.empty()
+
+    return pd.DataFrame(
+        comments
+    )
+
+
+# -----------------------------
+# 분석 버튼
+# -----------------------------
+if st.button(
+    "댓글 분석 시작 🚀"
+):
+
+    if not video_url:
+        st.warning(
+            "유튜브 링크를 입력하세요."
+        )
+        st.stop()
+
+    video_id = get_video_id(
+        video_url
+    )
+
+    if not video_id:
+        st.error(
+            "유효한 유튜브 링크가 아닙니다."
+        )
+        st.stop()
+
+    with st.spinner(
+        "댓글 수집 중..."
+    ):
+
+        df = get_comments(
+            api_key,
+            video_id,
+            max_comments
+        )
+
+    if df.empty:
+        st.error(
+            "댓글을 가져오지 못했습니다."
+        )
+        st.stop()
+
+    st.success(
+        f"✅ {len(df)}개의 댓글 수집 완료!"
+    )
+
+    # -----------------------------
+    # 댓글 데이터
+    # -----------------------------
+    st.subheader(
+        "📄 수집된 댓글 데이터"
+    )
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+    # -----------------------------
+    # 시간 데이터 처리
+    # -----------------------------
+    df["작성시간"] = pd.to_datetime(
+        df["작성시간"]
+    )
+
+    df["시간대"] = (
+        df["작성시간"]
+        .dt.hour
+    )
+
+    # -----------------------------
+    # 시간대별 댓글 추이
+    # -----------------------------
+    st.subheader(
+        "🕒 시간대별 댓글 추이"
+    )
+
+    time_count = (
+        df["시간대"]
+        .value_counts()
+        .sort_index()
+    )
+
+    fig, ax = plt.subplots(
+        figsize=(12, 5)
+    )
+
+    ax.plot(
+        time_count.index,
+        time_count.values,
+        marker="o"
+    )
+
+    ax.set_xticks(range(24))
+    ax.grid(alpha=0.3)
+
+    ax.set_title(
+        "시간대별 댓글 작성 추이"
+    )
+
+    ax.set_xlabel("시간대")
+    ax.set_ylabel("댓글 수")
+
+    st.pyplot(fig)
+
+    # -----------------------------
+    # 좋아요 분석 개선
+    # -----------------------------
+    st.subheader(
+        "👍 좋아요 수 분석"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "평균 좋아요",
+        round(
+            df["좋아요수"].mean(),
+            2
+        )
+    )
+
+    col2.metric(
+        "중앙값 좋아요",
+        int(
+            df["좋아요수"].median()
+        )
+    )
+
+    col3.metric(
+        "최대 좋아요",
+        int(
+            df["좋아요수"].max()
+        )
+    )
+
+    # 이상치 제거
+    threshold = (
+        df["좋아요수"]
+        .quantile(0.95)
+    )
+
+    filtered_likes = df[
+        df["좋아요수"]
+        <= threshold
+    ]["좋아요수"]
+
+    fig2, ax2 = plt.subplots(
+        figsize=(12, 5)
+    )
+
+    ax2.hist(
+        filtered_likes,
+        bins=30
+    )
+
+    ax2.set_title(
+        "좋아요 수 분포 (상위 5% 제외)"
+    )
+
+    ax2.set_xlabel(
+        "좋아요 수"
+    )
+
+    ax2.set_ylabel(
+        "댓글 개수"
+    )
+
+    st.pyplot(fig2)
+
+    # -----------------------------
+    # 좋아요 TOP 댓글
+    # -----------------------------
+    st.subheader(
+        "🔥 좋아요 TOP10 댓글"
+    )
+
+    top_comments = (
+        df.sort_values(
+            "좋아요수",
+            ascending=False
+        )
+        .head(10)
+    )
+
+    st.dataframe(
+        top_comments[
+            [
+                "댓글",
+                "좋아요수"
+            ]
+        ],
+        use_container_width=True
+    )
+
+    # -----------------------------
+    # 워드클라우드
+    # -----------------------------
+    st.subheader(
+        "☁️ 워드클라우드"
+    )
+
+    text = " ".join(
+        df["댓글"]
+        .astype(str)
+    )
+
+    text = re.sub(
+        r"[^가-힣\s]",
+        " ",
+        text
+    )
+
+    words = text.split()
+
+    stopwords = [
+        "영상", "진짜",
+        "너무", "그냥",
+        "이거", "저거",
+        "정말", "오늘",
+        "ㅋㅋ", "ㅎㅎ",
+        "ㅠㅠ", "입니다"
+    ]
+
+    words = [
+        word for word in words
+        if len(word) > 1
+        and word not in stopwords
+    ]
+
+    word_freq = Counter(
+        words
+    )
+
+    wc = WordCloud(
+        font_path=FONT_PATH,
+        width=1200,
+        height=600,
+        background_color="white"
+    ).generate_from_frequencies(
+        word_freq
+    )
+
+    fig3, ax3 = plt.subplots(
+        figsize=(15, 7)
+    )
+
+    ax3.imshow(wc)
+    ax3.axis("off")
+
+    st.pyplot(fig3)
+
+    # -----------------------------
+    # TOP10 단어
+    # -----------------------------
+    st.subheader(
+        "🔥 자주 등장한 단어 TOP10"
+    )
+
+    top10 = pd.DataFrame(
+        word_freq.most_common(10),
+        columns=[
+            "단어",
+            "빈도수"
+        ]
+    )
+
+    st.bar_chart(
+        top10.set_index(
+            "단어"
+        )
+    )
