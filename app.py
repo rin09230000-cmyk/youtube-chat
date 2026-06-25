@@ -104,6 +104,31 @@ def get_video_id(url):
 # -----------------------------
 # 댓글 수집
 # -----------------------------
+# -----------------------------
+# 채널 정보 가져오기
+# -----------------------------
+def get_channel_info(api_key, video_id):
+
+    youtube = build(
+        "youtube",
+        "v3",
+        developerKey=api_key
+    )
+
+    response = youtube.videos().list(
+        part="snippet",
+        id=video_id
+    ).execute()
+
+    if not response["items"]:
+        return None
+
+    snippet = response["items"][0]["snippet"]
+
+    return {
+        "channel_id": snippet["channelId"],
+        "channel_name": snippet["channelTitle"]
+    }
 def get_comments(
     api_key,
     video_id,
