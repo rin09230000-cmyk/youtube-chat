@@ -20,10 +20,6 @@ st.set_page_config(
 
 st.title("📊 유튜브 댓글 분석기")
 
-channel = st.text_input("유튜브 채널명 입력")
-
-if channel:
-    st.session_state["channel"] = channel
 # -----------------------------
 # 한글 폰트 설정
 # -----------------------------
