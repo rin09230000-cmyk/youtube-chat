@@ -12,11 +12,6 @@ import os
 # -----------------------------
 # 페이지 설정
 # -----------------------------
-st.set_page_config(
-    page_title="유튜브 댓글 분석기",
-    page_icon="📊",
-    layout="wide"
-)
 
 st.title("📊 유튜브 댓글 분석기")
 
