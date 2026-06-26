@@ -13,7 +13,17 @@ youtube = build(
     "v3",
     developerKey=API_KEY
 )
+def get_grade(score):
 
+    if score >= 90:
+        return "S"
+    if score >= 80:
+        return "A"
+    if score >= 70:
+        return "B"
+    if score >= 60:
+        return "C"
+    return "D"
 # --------------------------
 # URL 처리
 # --------------------------
