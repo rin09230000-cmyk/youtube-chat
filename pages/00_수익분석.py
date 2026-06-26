@@ -21,7 +21,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 유튜브 댓글 분석기")
+st.title("📊 유튜브 수익 분석기")
 
 # --------------------------
 # URL 처리
