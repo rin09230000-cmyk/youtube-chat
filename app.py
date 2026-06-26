@@ -489,6 +489,7 @@ if st.button(
     st.bar_chart(
         top10.set_index(
             "단어"
-st.write(st.session_state)
+    st.write(st.session_state)
+
         )
     )
