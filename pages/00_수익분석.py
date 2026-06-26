@@ -123,10 +123,6 @@ channel_input = st.text_input(
 
 if st.button("수익 분석하기"):
 
-    if not channel_input:
-        st.warning("채널명을 입력하세요")
-        st.stop()
-
     try:
 
         with st.spinner("분석 중..."):
