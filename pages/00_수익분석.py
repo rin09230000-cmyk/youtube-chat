@@ -111,10 +111,11 @@ def estimate_revenue(total_views):
 # UI
 # --------------------------
 
-channel_input = st.text_input(
-    "채널명 또는 URL",
-    placeholder="예: 침착맨 또는 https://youtube.com/@chimchakman"
-)
+channel_input = st.text_input("채널 또는 URL 입력")
+
+if st.button("저장"):
+    st.session_state["channel"] = channel_input
+    st.success("저장 완료")
 
 if st.button("수익 분석하기"):
 
