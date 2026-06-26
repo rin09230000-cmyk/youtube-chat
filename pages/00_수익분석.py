@@ -17,7 +17,7 @@ youtube = build(
 
 st.title("📊 유튜브 수익 분석기")
 
-channel_input = st.text_input("채널명 입력")
+channel_input = st.text_input("채널명 또는 URL 입력")
 
 if channel_input:
     st.session_state["channel"] = channel_input
