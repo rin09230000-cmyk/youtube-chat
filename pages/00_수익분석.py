@@ -15,12 +15,6 @@ youtube = build(
     developerKey=API_KEY
 )
 
-st.set_page_config(
-    page_title="유튜브 채널 수익 분석기",
-    page_icon="📊",
-    layout="wide"
-)
-
 st.title("📊 유튜브 수익 분석기")
 
 channel_input = st.text_input("채널명 입력")
