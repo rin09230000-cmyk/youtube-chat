@@ -156,10 +156,6 @@ def get_grade(score):
 
 channel_input = st.session_state.get("channel")
 
-if not channel:
-    st.warning("먼저 수익 분석 페이지에서 채널을 입력하세요")
-    st.stop()
-
 st.title("📊 채널 분석")
 
 st.write("현재 채널:", channel)
