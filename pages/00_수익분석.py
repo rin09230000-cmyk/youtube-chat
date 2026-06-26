@@ -21,8 +21,6 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 유튜브 채널 수익 분석기")
-
 channel_input = st.text_input("채널명 또는 URL 입력")
 
 if channel_input:
