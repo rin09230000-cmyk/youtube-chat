@@ -14,14 +14,6 @@ youtube = build(
     developerKey=API_KEY
 )
 
-st.set_page_config(
-    page_title="채널 성장 분석",
-    page_icon="📈",
-    layout="wide"
-)
-
-st.title("📈 채널 성장 분석")
-
 # --------------------------
 # URL 처리
 # --------------------------
