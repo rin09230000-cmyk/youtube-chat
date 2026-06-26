@@ -15,6 +15,8 @@ youtube = build(
     developerKey=API_KEY
 )
 
+st.title("📊 유튜브 수익 분석기")
+
 # --------------------------
 # URL 처리
 # --------------------------
