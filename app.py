@@ -474,16 +474,11 @@ if st.button(
     # -----------------------------
     # TOP10 단어
     # -----------------------------
-    st.subheader(
-        "🔥 자주 등장한 단어 TOP10"
-    )
+    st.subheader("🔥 자주 등장한 단어 TOP10")
 
-    top10 = pd.DataFrame(
-        word_freq.most_common(10),
-        columns=[
-            "단어",
-            "빈도수"
-        ]
-    )
+top10 = pd.DataFrame(
+    word_freq.most_common(10),
+    columns=["단어", "빈도수"]
+)
 
 st.bar_chart(top10.set_index("단어"))
